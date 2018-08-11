@@ -1,0 +1,735 @@
+package org.shenjia.sqlaudit;
+
+import java.io.InputStream;
+import java.io.Reader;
+import java.math.BigDecimal;
+import java.net.URL;
+import java.sql.Array;
+import java.sql.Blob;
+import java.sql.Clob;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.NClob;
+import java.sql.ParameterMetaData;
+import java.sql.PreparedStatement;
+import java.sql.Ref;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.RowId;
+import java.sql.SQLException;
+import java.sql.SQLWarning;
+import java.sql.SQLXML;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+class PreparedStatementProxy<P extends PreparedStatement> implements
+        PreparedStatement {
+
+    protected P proxy;
+    protected AuditObject auditObject;
+    protected String dbType;
+
+    PreparedStatementProxy(P proxy,
+            AuditObject auditObject,
+            String dbType) {
+        this.proxy = proxy;
+        this.auditObject = auditObject;
+        this.dbType = dbType;
+    }
+
+    @Override
+    public ResultSet executeQuery(String sql) throws SQLException {
+        return proxy.executeQuery(sql);
+    }
+
+    @Override
+    public int executeUpdate(String sql) throws SQLException {
+        if (!doAudit(sql)) {
+            return 0;
+        }
+        return proxy.executeUpdate(sql);
+    }
+
+    @Override
+    public void close() throws SQLException {
+        proxy.close();
+    }
+
+    @Override
+    public int getMaxFieldSize() throws SQLException {
+        return proxy.getMaxFieldSize();
+    }
+
+    @Override
+    public void setMaxFieldSize(int max) throws SQLException {
+        proxy.setMaxFieldSize(max);
+    }
+
+    @Override
+    public int getMaxRows() throws SQLException {
+        return proxy.getMaxRows();
+    }
+
+    @Override
+    public void setMaxRows(int max) throws SQLException {
+        proxy.setMaxRows(max);
+    }
+
+    @Override
+    public void setEscapeProcessing(boolean enable) throws SQLException {
+        proxy.setEscapeProcessing(enable);
+    }
+
+    @Override
+    public int getQueryTimeout() throws SQLException {
+        return proxy.getQueryTimeout();
+    }
+
+    @Override
+    public void setQueryTimeout(int seconds) throws SQLException {
+        proxy.setQueryTimeout(seconds);
+    }
+
+    @Override
+    public void cancel() throws SQLException {
+        proxy.close();
+    }
+
+    @Override
+    public SQLWarning getWarnings() throws SQLException {
+        return proxy.getWarnings();
+    }
+
+    @Override
+    public void clearWarnings() throws SQLException {
+        proxy.clearWarnings();
+    }
+
+    @Override
+    public void setCursorName(String name) throws SQLException {
+        proxy.setCursorName(name);
+    }
+
+    @Override
+    public boolean execute(String sql) throws SQLException {
+        if (!doAudit(sql)) {
+            return false;
+        }
+        return proxy.execute(sql);
+    }
+
+    @Override
+    public ResultSet getResultSet() throws SQLException {
+        return proxy.getResultSet();
+    }
+
+    @Override
+    public int getUpdateCount() throws SQLException {
+        return proxy.getUpdateCount();
+    }
+
+    @Override
+    public boolean getMoreResults() throws SQLException {
+        return proxy.getMoreResults();
+    }
+
+    @Override
+    public void setFetchDirection(int direction) throws SQLException {
+        proxy.setFetchDirection(direction);
+    }
+
+    @Override
+    public int getFetchDirection() throws SQLException {
+        return proxy.getFetchDirection();
+    }
+
+    @Override
+    public void setFetchSize(int rows) throws SQLException {
+        proxy.setFetchSize(rows);
+    }
+
+    @Override
+    public int getFetchSize() throws SQLException {
+        return proxy.getFetchSize();
+    }
+
+    @Override
+    public int getResultSetConcurrency() throws SQLException {
+        return proxy.getResultSetConcurrency();
+    }
+
+    @Override
+    public int getResultSetType() throws SQLException {
+        return proxy.getResultSetType();
+    }
+
+    @Override
+    public void addBatch(String sql) throws SQLException {
+        proxy.addBatch(sql);
+    }
+
+    @Override
+    public void clearBatch() throws SQLException {
+        proxy.clearBatch();
+    }
+
+    @Override
+    public int[] executeBatch() throws SQLException {
+        return proxy.executeBatch();
+    }
+
+    @Override
+    public Connection getConnection() throws SQLException {
+        return proxy.getConnection();
+    }
+
+    @Override
+    public boolean getMoreResults(int current) throws SQLException {
+        return proxy.getMoreResults();
+    }
+
+    @Override
+    public ResultSet getGeneratedKeys() throws SQLException {
+        return proxy.getGeneratedKeys();
+    }
+
+    @Override
+    public int executeUpdate(String sql,
+        int autoGeneratedKeys) throws SQLException {
+        if (!doAudit(sql)) {
+            return 0;
+        }
+        return proxy.executeUpdate(sql, autoGeneratedKeys);
+    }
+
+    @Override
+    public int executeUpdate(String sql,
+        int[] columnIndexes) throws SQLException {
+        if (!doAudit(sql)) {
+            return 0;
+        }
+        return proxy.executeUpdate(sql, columnIndexes);
+    }
+
+    @Override
+    public int executeUpdate(String sql,
+        String[] columnNames) throws SQLException {
+        if (!doAudit(sql)) {
+            return 0;
+        }
+        return proxy.executeUpdate(sql, columnNames);
+    }
+
+    @Override
+    public boolean execute(String sql,
+        int autoGeneratedKeys) throws SQLException {
+        if (!doAudit(sql)) {
+            return false;
+        }
+        return proxy.execute(sql, autoGeneratedKeys);
+    }
+
+    @Override
+    public boolean execute(String sql,
+        int[] columnIndexes) throws SQLException {
+        if (!doAudit(sql)) {
+            return false;
+        }
+        return proxy.execute(sql, columnIndexes);
+    }
+
+    @Override
+    public boolean execute(String sql,
+        String[] columnNames) throws SQLException {
+        if (!doAudit(sql)) {
+            return false;
+        }
+        return proxy.execute(sql, columnNames);
+    }
+
+    @Override
+    public int getResultSetHoldability() throws SQLException {
+        return proxy.getResultSetHoldability();
+    }
+
+    @Override
+    public boolean isClosed() throws SQLException {
+        return proxy.isClosed();
+    }
+
+    @Override
+    public void setPoolable(boolean poolable) throws SQLException {
+        proxy.setPoolable(poolable);
+    }
+
+    @Override
+    public boolean isPoolable() throws SQLException {
+        return proxy.isPoolable();
+    }
+
+    @Override
+    public void closeOnCompletion() throws SQLException {
+        proxy.closeOnCompletion();
+    }
+
+    @Override
+    public boolean isCloseOnCompletion() throws SQLException {
+        return proxy.isCloseOnCompletion();
+    }
+
+    @Override
+    public <T> T unwrap(Class<T> iface) throws SQLException {
+        return proxy.unwrap(iface);
+    }
+
+    @Override
+    public boolean isWrapperFor(Class<?> iface) throws SQLException {
+        return proxy.isWrapperFor(iface);
+    }
+
+    @Override
+    public ResultSet executeQuery() throws SQLException {
+        return proxy.executeQuery();
+    }
+
+    @Override
+    public int executeUpdate() throws SQLException {
+        if (!doAudit()) {
+            return 0;
+        }
+        return proxy.executeUpdate();
+    }
+
+    @Override
+    public void setNull(int parameterIndex,
+        int sqlType) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, sqlType);
+        proxy.setNull(parameterIndex, sqlType);
+    }
+
+    @Override
+    public void setBoolean(int parameterIndex,
+        boolean x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setBoolean(parameterIndex, x);
+    }
+
+    @Override
+    public void setByte(int parameterIndex,
+        byte x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setByte(parameterIndex, x);
+    }
+
+    @Override
+    public void setShort(int parameterIndex,
+        short x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setShort(parameterIndex, x);
+    }
+
+    @Override
+    public void setInt(int parameterIndex,
+        int x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setInt(parameterIndex, x);
+    }
+
+    @Override
+    public void setLong(int parameterIndex,
+        long x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setLong(parameterIndex, x);
+    }
+
+    @Override
+    public void setFloat(int parameterIndex,
+        float x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setFloat(parameterIndex, x);
+    }
+
+    @Override
+    public void setDouble(int parameterIndex,
+        double x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setDouble(parameterIndex, x);
+    }
+
+    @Override
+    public void setBigDecimal(int parameterIndex,
+        BigDecimal x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setBigDecimal(parameterIndex, x);
+    }
+
+    @Override
+    public void setString(int parameterIndex,
+        String x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setObject(parameterIndex, x);
+    }
+
+    @Override
+    public void setBytes(int parameterIndex,
+        byte[] x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setBytes(parameterIndex, x);
+    }
+
+    @Override
+    public void setDate(int parameterIndex,
+        Date x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setDate(parameterIndex, x);
+    }
+
+    @Override
+    public void setTime(int parameterIndex,
+        Time x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setTime(parameterIndex, x);
+    }
+
+    @Override
+    public void setTimestamp(int parameterIndex,
+        Timestamp x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setTimestamp(parameterIndex, x);
+    }
+
+    @Override
+    public void setAsciiStream(int parameterIndex,
+        InputStream x,
+        int length) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setAsciiStream(parameterIndex, x, length);
+    }
+
+    @Override
+    @Deprecated
+    public void setUnicodeStream(int parameterIndex,
+        InputStream x,
+        int length) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setUnicodeStream(parameterIndex, x, length);
+    }
+
+    @Override
+    public void setBinaryStream(int parameterIndex,
+        InputStream x,
+        int length) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setBinaryStream(parameterIndex, x, length);
+    }
+
+    @Override
+    public void clearParameters() throws SQLException {
+        proxy.clearParameters();
+    }
+
+    @Override
+    public void setObject(int parameterIndex,
+        Object x,
+        int targetSqlType) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setObject(parameterIndex, x, targetSqlType);
+    }
+
+    @Override
+    public void setObject(int parameterIndex,
+        Object x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setObject(parameterIndex, x);
+    }
+
+    @Override
+    public boolean execute() throws SQLException {
+        if (!doAudit()) {
+            return false;
+        }
+        return proxy.execute();
+    }
+
+    @Override
+    public void addBatch() throws SQLException {
+        proxy.addBatch();
+    }
+
+    @Override
+    public void setCharacterStream(int parameterIndex,
+        Reader reader,
+        int length) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, reader);
+        proxy.setCharacterStream(parameterIndex, reader, length);
+    }
+
+    @Override
+    public void setRef(int parameterIndex,
+        Ref x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setRef(parameterIndex, x);
+    }
+
+    @Override
+    public void setBlob(int parameterIndex,
+        Blob x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setBlob(parameterIndex, x);
+    }
+
+    @Override
+    public void setClob(int parameterIndex,
+        Clob x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setClob(parameterIndex, x);
+    }
+
+    @Override
+    public void setArray(int parameterIndex,
+        Array x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setArray(parameterIndex, x);
+    }
+
+    @Override
+    public ResultSetMetaData getMetaData() throws SQLException {
+        return proxy.getMetaData();
+    }
+
+    @Override
+    public void setDate(int parameterIndex,
+        Date x,
+        Calendar cal) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setDate(parameterIndex, x, cal);
+    }
+
+    @Override
+    public void setTime(int parameterIndex,
+        Time x,
+        Calendar cal) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setTime(parameterIndex, x, cal);
+    }
+
+    @Override
+    public void setTimestamp(int parameterIndex,
+        Timestamp x,
+        Calendar cal) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setTimestamp(parameterIndex, x, cal);
+    }
+
+    @Override
+    public void setNull(int parameterIndex,
+        int sqlType,
+        String typeName) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, sqlType);
+        proxy.setNull(parameterIndex, sqlType, typeName);
+    }
+
+    @Override
+    public void setURL(int parameterIndex,
+        URL x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setURL(parameterIndex, x);
+    }
+
+    @Override
+    public ParameterMetaData getParameterMetaData() throws SQLException {
+        return proxy.getParameterMetaData();
+    }
+
+    @Override
+    public void setRowId(int parameterIndex,
+        RowId x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setRowId(parameterIndex, x);
+    }
+
+    @Override
+    public void setNString(int parameterIndex,
+        String value) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, value);
+        proxy.setNString(parameterIndex, value);
+    }
+
+    @Override
+    public void setNCharacterStream(int parameterIndex,
+        Reader value,
+        long length) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, value);
+        proxy.setNCharacterStream(parameterIndex, value, length);
+    }
+
+    @Override
+    public void setNClob(int parameterIndex,
+        NClob value) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, value);
+        proxy.setNClob(parameterIndex, value);
+    }
+
+    @Override
+    public void setClob(int parameterIndex,
+        Reader reader,
+        long length) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, reader);
+        proxy.setClob(parameterIndex, reader, length);
+    }
+
+    @Override
+    public void setBlob(int parameterIndex,
+        InputStream inputStream,
+        long length) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, inputStream);
+        proxy.setBlob(parameterIndex, inputStream, length);
+    }
+
+    @Override
+    public void setNClob(int parameterIndex,
+        Reader reader,
+        long length) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, reader);
+        proxy.setNClob(parameterIndex, reader, length);
+    }
+
+    @Override
+    public void setSQLXML(int parameterIndex,
+        SQLXML xmlObject) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, xmlObject);
+        proxy.setSQLXML(parameterIndex, xmlObject);
+    }
+
+    @Override
+    public void setObject(int parameterIndex,
+        Object x,
+        int targetSqlType,
+        int scaleOrLength) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setObject(parameterIndex, x, targetSqlType, scaleOrLength);
+    }
+
+    @Override
+    public void setAsciiStream(int parameterIndex,
+        InputStream x,
+        long length) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setAsciiStream(parameterIndex, x, length);
+    }
+
+    @Override
+    public void setBinaryStream(int parameterIndex,
+        InputStream x,
+        long length) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setBinaryStream(parameterIndex, x, length);
+    }
+
+    @Override
+    public void setCharacterStream(int parameterIndex,
+        Reader reader,
+        long length) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, reader);
+        proxy.setCharacterStream(parameterIndex, reader, length);
+    }
+
+    @Override
+    public void setAsciiStream(int parameterIndex,
+        InputStream x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setAsciiStream(parameterIndex, x);
+    }
+
+    @Override
+    public void setBinaryStream(int parameterIndex,
+        InputStream x) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, x);
+        proxy.setBinaryStream(parameterIndex, x);
+    }
+
+    @Override
+    public void setCharacterStream(int parameterIndex,
+        Reader reader) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, reader);
+        proxy.setCharacterStream(parameterIndex, reader);
+    }
+
+    @Override
+    public void setNCharacterStream(int parameterIndex,
+        Reader value) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, value);
+        proxy.setNCharacterStream(parameterIndex, value);
+    }
+
+    @Override
+    public void setClob(int parameterIndex,
+        Reader reader) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, reader);
+        proxy.setClob(parameterIndex, reader);
+    }
+
+    @Override
+    public void setBlob(int parameterIndex,
+        InputStream inputStream) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, inputStream);
+        proxy.setBlob(parameterIndex, inputStream);
+    }
+
+    @Override
+    public void setNClob(int parameterIndex,
+        Reader reader) throws SQLException {
+        SqlAuditor.setParameter(auditObject, parameterIndex, reader);
+        proxy.setNClob(parameterIndex, reader);
+    }
+
+    private boolean doAudit(String sql) throws SQLException {
+        this.auditObject = new AuditObjectBuilder().build(dbType, sql);
+        return doAudit();
+    }
+
+    private boolean doAudit() throws SQLException {
+        if (null != auditObject) {
+            try (PreparedStatement ps = auditSelectPreparedStatement(); ResultSet rs = ps.executeQuery();) {
+                Set<String> colNames = auditObject.getColumns().keySet();
+                while (rs.next()) {
+                    Map<String, Object> row = new HashMap<>();
+                    colNames.forEach((col) -> {
+                        try {
+                            row.put(col, rs.getObject(col));
+                        } catch (SQLException e) {
+                            throw new SqlAuditException(e.getMessage(), e);
+                        }
+                    });
+                    auditObject.addSelectResult(row);
+                }
+            }
+            int pos = 1;
+            for (Entry<String, Object> e : auditObject.getColumns().entrySet()) {
+                if ("?".equals(e.getValue())) {
+                    auditObject.getColumns().replace(e.getKey(), auditObject.getParameters().get(pos));
+                    pos++;
+                }
+            }
+            if (null == auditObject.getSelectResult() || auditObject.getSelectResult().size() <= 0) {
+                return false;
+            }
+        }
+        SqlAuditor.saveAuditObject(auditObject);
+        return true;
+    }
+
+    private PreparedStatement auditSelectPreparedStatement() throws SQLException {
+        PreparedStatement ps = getConnection().prepareStatement(auditObject.getSelectSql());
+        int size = auditObject.getParameters().size() - auditObject.getSelectParameterOffset();
+        for (int i = 1; i <= size; i++) {
+            ps.setObject(i, auditObject.getParameters().get(i + auditObject.getSelectParameterOffset()));
+        }
+        return ps;
+    }
+}
